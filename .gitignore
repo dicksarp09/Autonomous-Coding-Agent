@@ -1,0 +1,84 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Database
+*.sqlite3
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (frontend)
+node_modules/
+.next/
+out/
+
+# Agent
+agent_checkpoints/
+agent_workspace/
+agent_sandbox/
+
+# Debug files
+debug_*.py
+test_*.py
+check_*.py
+eval_suite.py
+
+# Documentation to exclude (as requested)
+*_REPORT.txt
+*_STATUS.txt
+*_GUIDE.md
+*ANALYSIS*.md
+CHANGELOG.md
+prompt*.md
+README_FRONTEND.md
+
+# Keep README.md
+!README.md
+
+# Keep test JSON files
+!tests/*.json

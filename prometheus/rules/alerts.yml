@@ -1,0 +1,54 @@
+# Alerting rules for Coding Agent
+groups:
+  - name: coding-agent-alerts
+    interval: 30s
+    rules:
+      # High error rate alert
+      - alert: HighErrorRate
+        expr: error_rate_percent > 5
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }}% for the last 5 minutes"
+
+      # High latency alert
+      - alert: HighLatency
+        expr: request_latency_ms{type="avg"} > 5000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency detected"
+          description: "Average request latency is {{ $value }}ms"
+
+      # High cost alert
+      - alert: HighCost
+        expr: llm_cost_total_usd > 100
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "High LLM cost detected"
+          description: "Total LLM cost has exceeded $100"
+
+      # Agent failure alert
+      - alert: AgentFailure
+        expr: agent_patch_success_rate < 0.5
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Agent success rate below 50%"
+          description: "Agent patch success rate is {{ $value }}%"
+
+      # Backend down alert
+      - alert: BackendDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend is down"
+          description: "Backend has been down for more than 1 minute"
