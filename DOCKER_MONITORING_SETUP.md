@@ -108,7 +108,7 @@ volumes:
 | Service | URL | Credentials |
 |---------|-----|-------------|
 | Prometheus | http://localhost:9090 | N/A |
-| Grafana | http://localhost:3001 | admin / admin |
+| Grafana | http://localhost:3030 | admin / admin |
 | Backend API | http://localhost:8000 | N/A |
 | API Docs | http://localhost:8000/docs | N/A |
 

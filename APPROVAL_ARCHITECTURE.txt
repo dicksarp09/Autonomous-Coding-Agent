@@ -1,0 +1,332 @@
+# Human Approval Gating - Architecture Diagram
+
+## System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                       AUTONOMOUS AGENT SYSTEM                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─── LIVE WORKFLOW ──────────────────────────────────────────────────┐
+│                                                                       │
+│  GoalValidator → Planner → CodeGenerator → StaticAnalyzer          │
+│       ↓                                                 ↓             │
+│  SandboxExecutor → TestRunner → Reflector                          │
+│                                    │                                  │
+│                                    ↓                                  │
+│                      evaluate_with_human_approval()                  │
+│                            │                                         │
+│                            ├─→ Judge evaluation                      │
+│                            ├─→ Check thresholds                      │
+│                            ├─→ If unsafe/risky:                      │
+│                            │   create_approval_gate()                │
+│                            └─→ request_human_approval()              │
+│                                    │                                  │
+│                                    ↓                                  │
+│                         CompletionChecker                            │
+│                            │                                         │
+│                    ┌───────┴──────────┐                              │
+│                    │                  │                              │
+│            ┌──────────────┐    ┌──────────────┐                      │
+│            │  No Gates?   │    │  Pending?    │                      │
+│            └──────────────┘    └──────────────┘                      │
+│                    │                  │                              │
+│                   YES                NO                              │
+│                    │                  │                              │
+│                    ↓                  ↓                              │
+│              Continue          ApprovalChecker                       │
+│                │                     │                              │
+│                │            ┌────────┴────────┐                      │
+│                │            │                 │                      │
+│                │        Pending?          All Approved?              │
+│                │            │                 │                      │
+│                │           YES               NO                      │
+│                │            │                 │                      │
+│                │            ↓                 ↓                      │
+│                │        PAUSED         Resume Execution              │
+│                │     (AWAITING_      (APPROVAL_GRANTED)             │
+│                │      APPROVAL)            │                        │
+│                │                           ↓                        │
+│                └──────────────┬─────────────┘                        │
+│                               │                                      │
+│                     MemoryUpdater → End                             │
+│                                                                       │
+└───────────────────────────────────────────────────────────────────┘
+
+┌─── EVALUATION PIPELINE ───────────────────────────────────────────┐
+│                                                                      │
+│  For Each Golden Test Case:                                        │
+│      │                                                              │
+│      ├─→ evaluate_with_human_approval()                            │
+│      │      │                                                       │
+│      │      ├─→ remote_judge_evaluate()                            │
+│      │      ├─→ Check safety ✓                                     │
+│      │      ├─→ Check correctness ≥ 0.75 ✓                        │
+│      │      ├─→ Check hallucination ✓                              │
+│      │      ├─→ Check PII ✓                                        │
+│      │      │                                                       │
+│      │      └─→ If any fail:                                       │
+│      │          request_human_approval()                           │
+│      │                                                              │
+│      └─→ Persist metrics and approval status                       │
+│         Return results with approval metadata                      │
+│                                                                      │
+└────────────────────────────────────────────────────────────────────┘
+
+┌─── APPROVAL SYSTEM ──────────────────────────────────────────────┐
+│                                                                    │
+│  create_approval_gate()                                           │
+│      │                                                             │
+│      ├─→ Generate unique gate_id                                  │
+│      ├─→ Record triggered_at timestamp                            │
+│      ├─→ Store reason for approval                                │
+│      ├─→ Persist to approval_gates table                          │
+│      └─→ Return ApprovalGate object                               │
+│                                                                    │
+│  resolve_approval_gate()                                          │
+│      │                                                             │
+│      ├─→ Validate gate exists                                     │
+│      ├─→ Set resolved = True                                      │
+│      ├─→ Record approved_by ID                                    │
+│      ├─→ Record resolved_at timestamp                             │
+│      └─→ Update approval_gates table                              │
+│                                                                    │
+│  get_pending_gates()                                              │
+│      │                                                             │
+│      ├─→ Query approval_gates WHERE resolved = 0                  │
+│      └─→ Return list of unresolved ApprovalGate objects           │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
+
+┌─── DATABASE SCHEMA ───────────────────────────────────────────┐
+│                                                                 │
+│  approval_gates Table:                                         │
+│  ┌─────────────────┬──────────┬──────────────────────────┐   │
+│  │ gate_id (PK)    │ TEXT     │ Unique identifier        │   │
+│  │ workflow_id     │ TEXT     │ Associated workflow      │   │
+│  │ node_name       │ TEXT     │ Orchestration node       │   │
+│  │ triggered_at    │ TEXT     │ Gate creation time       │   │
+│  │ reason          │ TEXT     │ Why approval needed      │   │
+│  │ resolved        │ INTEGER  │ Is gate resolved?        │   │
+│  │ approved_by     │ TEXT     │ Approver ID              │   │
+│  │ resolved_at     │ TEXT     │ Resolution time          │   │
+│  └─────────────────┴──────────┴──────────────────────────┘   │
+│                                                                 │
+│  approval_status Table:                                        │
+│  ┌──────────────────┬──────────┬──────────────────────────┐  │
+│  │ id (PK)          │ INTEGER  │ Row ID                   │  │
+│  │ workflow_id      │ TEXT     │ Associated workflow      │  │
+│  │ action           │ TEXT     │ Action type              │  │
+│  │ status           │ TEXT     │ PENDING/APPROVED/DENIED  │  │
+│  │ requester_id     │ TEXT     │ Who requested            │  │
+│  │ approver_id      │ TEXT     │ Who decided              │  │
+│  │ reason           │ TEXT     │ Decision reason          │  │
+│  │ timestamp        │ TEXT     │ Decision time            │  │
+│  └──────────────────┴──────────┴──────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─── DECISION LOGIC FLOW ────────────────────────────────────────┐
+│                                                                  │
+│  evaluate_with_human_approval()                                │
+│      │                                                          │
+│      ├─→ Call remote_judge_evaluate()                          │
+│      │       └─→ Returns: JudgeEvaluation object               │
+│      │                                                          │
+│      ├─→ Check safety_passed?                                  │
+│      │   └─→ If FALSE → Approval required                      │
+│      │                                                          │
+│      ├─→ Check correctness_score >= threshold?                 │
+│      │   └─→ If FALSE → Approval required                      │
+│      │                                                          │
+│      ├─→ Check hallucination_detected?                         │
+│      │   └─→ If TRUE → Approval required                       │
+│      │                                                          │
+│      ├─→ Check detect_pii(code)?                               │
+│      │   └─→ If TRUE → Approval required                       │
+│      │                                                          │
+│      └─→ If approval required:                                 │
+│          ├─→ request_human_approval()                          │
+│          └─→ Return (JudgeEvaluation, ApprovalRecord)          │
+│          Else:                                                 │
+│          └─→ Return (JudgeEvaluation, None)                    │
+│                                                                  │
+└───────────────────────────────────────────────────────────────┘
+
+┌─── MODULE DEPENDENCIES ────────────────────────────────────────┐
+│                                                                  │
+│  main.py                                                       │
+│    ├─→ orchestration/approval_gate.py                          │
+│    ├─→ evaluation/judge.py                                     │
+│    ├─→ governance/governance.py                                │
+│    └─→ memory/long_term.py                                     │
+│                                                                  │
+│  evaluation/pipeline.py                                        │
+│    ├─→ evaluation/judge.py                                     │
+│    ├─→ governance/governance.py                                │
+│    └─→ checkpoint.py                                           │
+│                                                                  │
+│  evaluation/judge.py                                           │
+│    ├─→ governance/governance.py                                │
+│    ├─→ groq_client.py                                          │
+│    └─→ telemetry/tracing.py                                    │
+│                                                                  │
+│  governance/governance.py                                      │
+│    └─→ config.py                                               │
+│                                                                  │
+│  orchestration/approval_gate.py                                │
+│    ├─→ evaluation/judge.py                                     │
+│    └─→ telemetry/tracing.py                                    │
+│                                                                  │
+└───────────────────────────────────────────────────────────────┘
+
+┌─── TESTING COVERAGE ──────────────────────────────────────────┐
+│                                                                 │
+│  test_approval_gating()                                        │
+│    ├─→ create_approval_gate()                                  │
+│    ├─→ get_approval_gate()                                     │
+│    ├─→ get_pending_gates()                                     │
+│    ├─→ should_gate_execution()                                 │
+│    └─→ resolve_approval_gate()                                 │
+│                                                                 │
+│  test_approval_status_tracking()                               │
+│    ├─→ record_approval_status()                                │
+│    └─→ get_approval_status_for_workflow()                      │
+│                                                                 │
+│  test_evaluate_with_approval_conditions()                      │
+│    ├─→ Correctness threshold checking                          │
+│    ├─→ Safety requirement checking                             │
+│    └─→ Approval reason tracking                                │
+│                                                                 │
+│  test_pipeline_with_approval()                                 │
+│    ├─→ run_on_golden() with approval enabled                   │
+│    └─→ Results include approval metadata                       │
+│                                                                 │
+│  test_approval_required_check()                                │
+│    ├─→ is_approval_required()                                  │
+│    └─→ get_approval_status()                                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─── WORKFLOW STATE DIAGRAM ────────────────────────────────────┐
+│                                                                 │
+│                       ┌──────────┐                             │
+│                       │ RUNNING  │                             │
+│                       └─────┬────┘                             │
+│                             │                                  │
+│                    ┌────────▼────────┐                         │
+│                    │    Reflector    │                         │
+│                    │   Evaluates     │                         │
+│                    │   with Judge    │                         │
+│                    └────────┬────────┘                         │
+│                             │                                  │
+│                ┌────────────┴────────────┐                     │
+│                │                         │                     │
+│            Safe/OK            Risky/Low-Confidence              │
+│                │                         │                     │
+│                ↓                         ↓                     │
+│          Continue ────┐     ┌──> Create Gate                   │
+│                       │     │     Request Approval              │
+│                       │     │                                  │
+│                       ▼     ▼                                  │
+│              ┌──────────────────┐                              │
+│              │ CompletionChecker│                              │
+│              └────────┬─────────┘                              │
+│                       │                                        │
+│              ┌────────▼────────┐                               │
+│              │  Check Gates?   │                               │
+│              └────┬───────┬────┘                               │
+│                   │       │                                    │
+│               No  │       │ Yes                                │
+│                   │       │                                    │
+│                   ↓       └──────────┐                         │
+│              Continue        ┌───────▼─────────┐               │
+│                │             │ ApprovalChecker │               │
+│                │             └───────┬─────────┘               │
+│                │                     │                        │
+│                │        ┌────────────┴──────────┐             │
+│                │        │                       │             │
+│                │   Pending?              All Approved?        │
+│                │        │                       │             │
+│                │       YES                     NO             │
+│                │        │                       │             │
+│                │        ↓                       ↓             │
+│                │   PAUSED           Resume to Completion      │
+│                │   AWAITING_        Checker                   │
+│                │   APPROVAL         APPROVAL_GRANTED          │
+│                │        │                       │             │
+│                └────────┴───────┬───────────────┘             │
+│                                 │                             │
+│                        ┌────────▼─────────┐                   │
+│                        │ MemoryUpdater    │                   │
+│                        └────────┬─────────┘                   │
+│                                 │                             │
+│                        ┌────────▼─────────┐                   │
+│                        │ SUCCESS / FAILED │                   │
+│                        └──────────────────┘                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+```
+
+## Data Flow Example
+
+```
+User Request
+    │
+    ├─→ run_workflow("Fix bug")
+    │
+    ├─→ Reflector Node
+    │   │
+    │   ├─→ evaluate_with_human_approval()
+    │   │   │
+    │   │   ├─→ Judge: correctness=0.6, safety=true
+    │   │   │
+    │   │   ├─→ Check: 0.6 < 0.75 threshold → TRUE
+    │   │   │
+    │   │   └─→ Return: (JudgeEvaluation, ApprovalRecord)
+    │   │
+    │   └─→ create_approval_gate()
+    │       │
+    │       └─→ Store to approval_gates table
+    │
+    ├─→ CompletionChecker
+    │   │
+    │   ├─→ should_gate_execution()
+    │   │   │
+    │   │   └─→ Query: SELECT * FROM approval_gates WHERE resolved=0
+    │   │       └─→ Found 1 gate → TRUE
+    │   │
+    │   └─→ Route to ApprovalChecker
+    │       Status: AWAITING_APPROVAL
+    │
+    ├─→ [HUMAN DECISION]
+    │   Approver reviews and approves
+    │
+    ├─→ resolve_approval_gate()
+    │   │
+    │   └─→ UPDATE approval_gates SET resolved=1, approved_by='reviewer'
+    │
+    ├─→ [WORKFLOW RESUMES]
+    │
+    ├─→ ApprovalChecker
+    │   │
+    │   ├─→ get_pending_gates()
+    │   │   │
+    │   │   └─→ No pending gates found
+    │   │
+    │   └─→ Route back to CompletionChecker
+    │       Status: APPROVAL_GRANTED
+    │
+    ├─→ CompletionChecker (resumed)
+    │   │
+    │   └─→ Continue normal flow
+    │
+    └─→ MemoryUpdater → SUCCESS
+```
+
+---
+
+**Diagram Version**: 1.0
+**Last Updated**: February 25, 2026
+**Status**: Complete
