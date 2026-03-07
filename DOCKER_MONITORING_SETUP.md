@@ -114,22 +114,33 @@ volumes:
 
 ## Grafana Dashboard Setup
 
-1. Open Grafana at http://localhost:3001
+1. Open Grafana at http://localhost:3030
 2. Login with `admin` / `admin`
 3. Add Prometheus as data source:
    - Go to Configuration > Data Sources
    - Add Prometheus
    - URL: `http://prometheus:9090`
-4. Create dashboard or import existing one
+4. Import the dashboard:
+   - Go to Dashboards > Import
+   - Upload `grafana_dashboard.json` file
+   - Or use the JSON file in this project
 
 ### Import Dashboard
 
-Import a pre-built dashboard by going to Dashboards > Import and using dashboard ID `1860` (Node Exporter) or create custom panels for:
+Import a pre-built dashboard by going to Dashboards > Import:
+1. Upload `grafana_dashboard.json` from this project
+2. Select Prometheus as data source
 
-- `agent_workflows_total` - Total workflows executed
-- `agent_workflow_duration_seconds` - Workflow duration
-- `agent_tool_calls_total` - Tool call count
-- `agent_errors_total` - Error count by type
+The dashboard includes:
+- Workflow Rate (per second)
+- P95 Duration
+- Success Rate %
+- Tool Call Rate
+- Error Rate
+- Total Workflows
+- Total Tool Calls
+- Total Errors
+- Total Iterations
 
 ## Verify Metrics are Being Scraped
 
