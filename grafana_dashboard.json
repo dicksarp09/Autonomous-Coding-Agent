@@ -56,7 +56,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "ms"
         },
         "overrides": []
       },
@@ -80,12 +80,17 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "rate(agent_workflows_total[5m])",
+          "expr": "request_latency_ms{type=\"avg\"}",
           "refId": "A",
-          "legendFormat": "Workflows/sec"
+          "legendFormat": "Avg Latency"
+        },
+        {
+          "expr": "request_latency_ms{type=\"max\"}",
+          "refId": "B",
+          "legendFormat": "Max Latency"
         }
       ],
-      "title": "Workflow Rate",
+      "title": "Request Latency (ms)",
       "type": "timeseries"
     },
     {
@@ -105,7 +110,7 @@
               }
             ]
           },
-          "unit": "s"
+          "unit": "currencyUSD"
         },
         "overrides": []
       },
@@ -130,11 +135,11 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, rate(agent_workflow_duration_seconds_bucket[5m]))",
+          "expr": "llm_cost_total_usd",
           "refId": "A"
         }
       ],
-      "title": "P95 Duration",
+      "title": "Total LLM Cost (USD)",
       "type": "gauge"
     },
     {
@@ -187,152 +192,12 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "rate(agent_workflows_completed_total[5m]) / rate(agent_workflows_total[5m]) * 100",
+          "expr": "agent_patch_success_rate * 100",
           "refId": "A"
         }
       ],
-      "title": "Success Rate",
+      "title": "Patch Success Rate (%)",
       "type": "gauge"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 8
-      },
-      "id": 4,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "pluginVersion": "8.0.0",
-      "targets": [
-        {
-          "expr": "rate(agent_tool_calls_total[5m])",
-          "refId": "A",
-          "legendFormat": "Tool calls/sec"
-        }
-      ],
-      "title": "Tool Call Rate",
-      "type": "timeseries"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            },
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "never",
-            "spanNulls": true
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 8
-      },
-      "id": 5,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      },
-      "pluginVersion": "8.0.0",
-      "targets": [
-        {
-          "expr": "rate(agent_errors_total[5m])",
-          "refId": "A",
-          "legendFormat": "Errors/sec"
-        }
-      ],
-      "title": "Error Rate",
-      "type": "timeseries"
     },
     {
       "datasource": "Prometheus",
@@ -359,9 +224,9 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 16
+        "y": 8
       },
-      "id": 6,
+      "id": 4,
       "options": {
         "orientation": "auto",
         "reduceOptions": {
@@ -376,60 +241,11 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "agent_workflows_total",
+          "expr": "agent_avg_iterations",
           "refId": "A"
         }
       ],
-      "title": "Total Workflows",
-      "type": "gauge"
-    },
-    {
-      "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "unit": "short"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 6,
-        "x": 6,
-        "y": 16
-      },
-      "id": 7,
-      "options": {
-        "orientation": "auto",
-        "reduceOptions": {
-          "values": false,
-          "calcs": ["lastNotNull"],
-          "fields": ""
-        },
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "text": {}
-      },
-      "pluginVersion": "8.0.0",
-      "targets": [
-        {
-          "expr": "agent_tool_calls_total",
-          "refId": "A"
-        }
-      ],
-      "title": "Total Tool Calls",
+      "title": "Avg Iterations",
       "type": "gauge"
     },
     {
@@ -457,17 +273,17 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "percent"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 4,
         "w": 6,
-        "x": 12,
-        "y": 16
+        "x": 6,
+        "y": 8
       },
-      "id": 8,
+      "id": 5,
       "options": {
         "orientation": "auto",
         "reduceOptions": {
@@ -482,11 +298,11 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "agent_errors_total",
+          "expr": "error_rate_percent",
           "refId": "A"
         }
       ],
-      "title": "Total Errors",
+      "title": "Error Rate (%)",
       "type": "gauge"
     },
     {
@@ -506,17 +322,17 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "currencyUSD"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 4,
         "w": 6,
-        "x": 18,
-        "y": 16
+        "x": 12,
+        "y": 8
       },
-      "id": 9,
+      "id": 6,
       "options": {
         "orientation": "auto",
         "reduceOptions": {
@@ -531,12 +347,82 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "agent_iterations_total",
+          "expr": "llm_cost_monthly_projection_usd",
           "refId": "A"
         }
       ],
-      "title": "Total Iterations",
+      "title": "Monthly Cost Projection (USD)",
       "type": "gauge"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 12
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "8.0.0",
+      "targets": [
+        {
+          "expr": "rate(request_latency_ms{type=\"avg\"}[5m])",
+          "refId": "A",
+          "legendFormat": "Latency Rate"
+        }
+      ],
+      "title": "Latency Rate (per second)",
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 27,
@@ -551,7 +437,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Autonomous Coding Agent",
-  "uid": "autonomous-agent",
-  "version": 1
+  "title": "Autonomous Coding Agent - Metrics",
+  "uid": "autonomous-agent-metrics",
+  "version": 2
 }
