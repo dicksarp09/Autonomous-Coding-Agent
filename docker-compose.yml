@@ -1,81 +1,22 @@
-# Docker Compose for Autonomous Coding Agent
-# Run with: docker-compose up -d
+version: '3.8'
 
 services:
-  # ==================== Backend ====================
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: coding-agent-backend
-    ports:
-      - "8000:8000"
-    environment:
-      - GROQ_API_KEY=${GROQ_API_KEY}
-      - LANGSMITH_TRACING=true
-      - LANGSMITH_ENDPOINT=https://api.smith.langchain.com
-      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
-      - LANGSMITH_PROJECT=Coding Agent
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
-      - LANGFUSE_BASE_URL=https://cloud.langfuse.com
-    volumes:
-      - ./agent_data.sqlite3:/app/agent_data.sqlite3
-      - ./agent_checkpoints:/app/agent_checkpoints
-      - ./agent_workspace:/app/agent_workspace
-    networks:
-      - agent-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    labels:
-      - "prometheus.io/scrape=true"
-      - "prometheus.io/port=8000"
-      - "prometheus.io/path=/metrics"
-
-  # ==================== Frontend ====================
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: coding-agent-frontend
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-    networks:
-      - agent-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # ==================== Prometheus ====================
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/rules:/etc/prometheus/rules
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--web.enable-lifecycle'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
     networks:
       - agent-network
-    restart: unless-stopped
 
-  # ==================== Grafana ====================
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -84,34 +25,14 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
     volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
       - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
     networks:
       - agent-network
-    restart: unless-stopped
-
-  # ==================== Node Exporter (Optional) ====================
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: node-exporter
-    ports:
-      - "9100:9100"
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    networks:
-      - agent-network
-    restart: unless-stopped
 
 networks:
   agent-network:
