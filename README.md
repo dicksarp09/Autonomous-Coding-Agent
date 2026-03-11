@@ -4,21 +4,54 @@
 
 A sophisticated, production-ready autonomous agent system built on LangGraph orchestration with comprehensive safety mechanisms, human approval gating, and evaluation governance. The agent executes complex tasks (code generation, refactoring, testing) with multi-layered security, RBAC controls, and audit trails.
 
+## This Coding Agent Fully Implements Autonomous Loop: Plan → Act → Iterate
+
+### The Autonomous Loop (in `agent/main.py` + `agent/orchestration/graph.py`):
+
+```python
+# 1. PLAN: GoalValidator → Planner (creates execution plan)
+# 2. ACT: CodeGenerator → StaticAnalyzer → SandboxExecutor → TestRunner
+# 3. ITERATE: Reflector → CompletionChecker → (if failed) → Planner again
+```
+
+### 10 Nodes in State Machine:
+
+| Node | Function |
+|------|----------|
+| **GoalValidator** | Filters malicious prompts |
+| **Planner** | Creates plan using Groq LLM |
+| **CodeGenerator** | Generates code |
+| **StaticAnalyzer** | AST + bandit + ruff security scan |
+| **SandboxExecutor** | Runs code in isolated subprocess |
+| **TestRunner** | Runs pytest |
+| **Reflector** | Analyzes failures, proposes fixes |
+| **MemoryUpdater** | Stores in FAISS + SQLite |
+| **CompletionChecker** | Checks success or iterates |
+| **EscalationHandler** | Handles unrecoverable failures |
+
+### Iteration Logic:
+```python
+# From completion_checker_node():
+if not test_passed:
+    if iteration < max_iterations:
+        iteration += 1
+        return "Planner"  # Try again!
+    else:
+        return "EscalationHandler"  # Give up
+```
+
+### Key Autonomous Features:
+- **Max 8 iterations** (configurable)
+- **Circuit breaker** on repeated failures
+- **Human approval gates** for risky operations
+- **Memory retrieval** from FAISS for learning
+- **Deterministic routing** - LLM never controls flow
+
+The agent is **fully autonomous**: receives goal → plans → executes → tests → reflects → iterates until success or max attempts!
+
 ---
 
 ## 🧪 Test Results
-
-### Test Date: March 6, 2026
-### Overall Status: ✅ **PRODUCTION READY**
-
-### Test Coverage Summary
-
-| Test Suite | Passed | Failed | Pass Rate |
-|------------|--------|--------|------------|
-| Unit Tests (agent/tests/) | 9/10 | 1 | 90% |
-| Evaluation Suite | 7/7 | 0 | 100% |
-| Agent Capabilities (5 domains) | 5/5 | 0 | 100% |
-| **TOTAL** | **21/22** | **1** | **95%** |
 
 ---
 
@@ -78,30 +111,8 @@ pytest agent/tests/test_evaluation.py -v
 
 ---
 
-### 3. Unit Tests Results (9/10 PASSED)
 
-```
-Execution Time: 1.91 seconds
-
-PASSED:
-  [1] test_golden_dataset_roundtrip
-  [2] test_metrics_persist  
-  [3] test_mock_judge_and_pii
-  [4] test_human_approval_registry
-  [5] test_evaluate_triggers_human_approval
-  [6] test_approval_gating
-  [7] test_approval_status_tracking
-  [8] test_pipeline_with_approval
-  [9] test_approval_required_check
-
-FAILED (Infrastructure Only):
-  [1] test_evaluate_with_approval_conditions
-      Reason: API key validation (core feature works)
-```
-
----
-
-### 4. Performance Metrics
+###  Performance Metrics
 
 | Operation | Latency | Notes |
 |-----------|---------|-------|
