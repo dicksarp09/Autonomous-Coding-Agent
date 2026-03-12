@@ -137,15 +137,7 @@ pytest agent/tests/test_evaluation.py -v
 | Safety | ✅ PASS | No dangerous ops |
 | Hallucination | ✅ None | Verified |
 | Docstrings | 100% | All functions |
-| Type Hints | 100% | Full coverage |
-
-### Generated Code Statistics
-
-- **Average Lines per File:** 50-100
-- **Functions per File:** 3-5
-- **Test Coverage:** 3+ test cases
-- **Error Handling:** Present
-- **Overall Quality:** ⭐⭐⭐⭐⭐ (5/5)
+| Type Hints | 100% | Full 
 
 ---
 
