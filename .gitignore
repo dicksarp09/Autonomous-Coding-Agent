@@ -68,6 +68,10 @@ test_*.py
 check_*.py
 eval_suite.py
 
+# Keep agent tests
+!agent/tests/
+!agent/tests/test_*.py
+
 # Documentation to exclude (as requested)
 *_REPORT.txt
 *_STATUS.txt
