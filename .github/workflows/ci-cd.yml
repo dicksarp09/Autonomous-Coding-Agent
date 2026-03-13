@@ -50,7 +50,12 @@ jobs:
       - name: Run unit tests
         run: |
           export PYTHONPATH="$PWD:$PYTHONPATH"
-          pytest agent/tests/ -v --tb=short
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "GROQ_API_KEY not set, skipping agent capability tests"
+            pytest agent/tests/ -v --tb=short --ignore=agent/tests/test_agent_capabilities.py --ignore=agent/tests/test_memory.py
+          else
+            pytest agent/tests/ -v --tb=short
+          fi
 
       - name: Build Docker image
         run: |
