@@ -8,11 +8,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY agent/requirements.txt .
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt && \
-    pip install --no-cache-dir --user -r agent/requirements.txt
+# Copy requirements first for better caching
+COPY agent/requirements.txt agent/requirements.txt
+COPY requirements.txt requirements.txt
+
+# Install dependencies
+RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir --user -r agent/requirements.txt
 
 # Second stage - production
 FROM python:3.11-slim
@@ -35,7 +37,6 @@ COPY --chown=appuser:appuser . /app
 # Environment variables
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    GROQ_API_KEY=${GROQ_API_KEY} \
     LANGSMITH_TRACING=true \
     LANGSMITH_PROJECT="Coding Agent"
 
