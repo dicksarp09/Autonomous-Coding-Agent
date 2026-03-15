@@ -27,6 +27,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf 
 # Copy installed packages from builder
 COPY --from=builder /root/.local /root/.local
 
+# Add PATH for user-installed packages
+ENV PATH=/root/.local/bin:$PATH
+
 # Add local user for security
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
