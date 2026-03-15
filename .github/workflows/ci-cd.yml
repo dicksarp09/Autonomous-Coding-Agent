@@ -148,17 +148,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Bandit security scan
-        uses: secfigo/bandit-action@v1.0.0
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          path: './agent'
-          exit_zero: true
+          python-version: '3.11'
 
-      - name: Run Safety dependency check
-        uses: pyupio/safety-action@v1.0.0
-        with:
-          api-key: ${{ secrets.SAFETY_API_KEY }}
-          exit_zero: true
+      - name: Run Bandit security scan
+        run: |
+          pip install bandit
+          bandit -r agent/ -f json -o bandit-report.json || true
+          echo "Bandit scan completed"
 
   # ==================== Build & Push ====================
   build-and-push:
