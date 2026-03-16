@@ -1,34 +1,21 @@
-# Multi-stage build for Backend
-FROM python:3.11-slim as builder
-
-WORKDIR /app
-
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements first for better caching
-COPY agent/requirements.txt agent/requirements.txt
-COPY requirements.txt requirements.txt
-
-# Install dependencies
-RUN pip install --no-cache-dir --user -r requirements.txt
-RUN pip install --no-cache-dir --user -r agent/requirements.txt
-
-# Second stage - production
+# Backend Dockerfile
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install curl for health check
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+# Install curl for health check and build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy installed packages from builder
-COPY --from=builder /root/.local /root/.local
+# Copy requirements
+COPY agent/requirements.txt agent/requirements.txt
+COPY requirements.txt requirements.txt
 
-# Add PATH for user-installed packages
-ENV PATH=/root/.local/bin:$PATH
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r agent/requirements.txt
 
 # Add local user for security
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
