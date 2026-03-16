@@ -129,6 +129,7 @@ jobs:
 
       - name: Run integration tests
         run: |
+          export PYTHONPATH="$PWD:$PYTHONPATH"
           # Start backend in background
           python backend/run.py &
           sleep 5
