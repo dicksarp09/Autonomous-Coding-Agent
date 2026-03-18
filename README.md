@@ -1,4 +1,4 @@
-# Autonomous Coding Agent 
+# Autonomous Coding Agent
 
 ## Overview
 
